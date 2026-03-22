@@ -1,0 +1,14 @@
+langgraph
+langchain-groq
+langchain-community
+tavily-python
+fastapi
+uvicorn
+feedparser
+beautifulsoup4
+python-dotenv
+transformers
+torch
+requests
+sentence-transformers
+faiss-cpu
