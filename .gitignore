@@ -1,0 +1,9 @@
+notepad .gitignore
+```
+Paste this and save:
+```
+.env
+venv/
+__pycache__/
+*.pyc
+.DS_Store
