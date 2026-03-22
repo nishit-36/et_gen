@@ -15,9 +15,15 @@ class NewsState(TypedDict):
 
     interests: List[str]
     # example: ["markets", "startups", "economy"]
-
+    
     language: str
     # example: "english" / "hindi" / "gujarati"
+    
+    category: Optional[str]
+    # example: "markets" / "all" -- which tab user clicked
+
+    user_profile: Optional[dict]
+    # full profile object stored here so all nodes can access it
 
     # --- WHAT USER WANTS RIGHT NOW ---
     action: str
