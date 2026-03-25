@@ -1,45 +1,66 @@
 # database/db.py
-# This file creates our SQLite database and all 3 tables
-# SQLite is a simple database that saves data in a single file on your PC
-# No installation needed - Python has it built in
+# Creates SQLite database and all tables
+# Updated with better interest score formula
+# and new user profile fields
 
 import sqlite3
 import os
 from datetime import datetime
 
-# This is where our database file will be saved
-# It will create a file called "et_news.db" inside the database folder
 DB_PATH = os.path.join(os.path.dirname(__file__), "et_news.db")
 
 def get_connection():
-    # This function opens a connection to the database
-    # Like opening a file before reading or writing it
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    # row_factory means results come back as dictionaries
-    # so we can do result["user_id"] instead of result[0]
     return conn
 
 def create_tables():
-    # This function creates all 3 tables if they don't exist yet
-    # "IF NOT EXISTS" means it won't crash if tables already exist
     conn = get_connection()
     cursor = conn.cursor()
 
     # TABLE 1 - users
-    # Stores basic info about each user
+    # Updated with new fields: experience_level, reading_time_preference
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id TEXT PRIMARY KEY,
             profession TEXT DEFAULT 'general',
             interests TEXT DEFAULT '',
             language TEXT DEFAULT 'english',
-            created_at TEXT
+            experience_level TEXT DEFAULT 'general',
+            reading_time_preference TEXT DEFAULT 'any',
+            created_at TEXT,
+            last_active TEXT
         )
     """)
 
+    # Add new columns if they don't exist yet
+    # This handles existing database that was created before
+    # ALTER TABLE adds column only if it doesn't exist
+    try:
+        cursor.execute("""
+            ALTER TABLE users ADD COLUMN experience_level
+            TEXT DEFAULT 'general'
+        """)
+    except Exception:
+        pass
+        # Column already exists - ignore error
+
+    try:
+        cursor.execute("""
+            ALTER TABLE users ADD COLUMN reading_time_preference
+            TEXT DEFAULT 'any'
+        """)
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("""
+            ALTER TABLE users ADD COLUMN last_active TEXT
+        """)
+    except Exception:
+        pass
+
     # TABLE 2 - reading_history
-    # Every time user clicks an article, we save it here
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS reading_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,70 +73,102 @@ def create_tables():
     """)
 
     # TABLE 3 - interest_scores
-    # Auto calculated score per category per user
-    # Higher score = show more of this category
+    # Updated with normalized_score field
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS interest_scores (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT,
             category TEXT,
             score REAL DEFAULT 0.0,
+            normalized_score REAL DEFAULT 0.0,
             article_count INTEGER DEFAULT 0,
+            total_time_sec INTEGER DEFAULT 0,
             updated_at TEXT
         )
     """)
 
-    conn.commit()
-    # commit means save all changes permanently
-    conn.close()
-    print("Database and tables created successfully!")
+    # Add new columns if they don't exist
+    try:
+        cursor.execute("""
+            ALTER TABLE interest_scores ADD COLUMN
+            normalized_score REAL DEFAULT 0.0
+        """)
+    except Exception:
+        pass
 
-def save_user(user_id, profession="general", interests=[], language="english"):
-    # This function saves a new user to the database
-    # Or updates existing user if they already exist
+    try:
+        cursor.execute("""
+            ALTER TABLE interest_scores ADD COLUMN
+            total_time_sec INTEGER DEFAULT 0
+        """)
+    except Exception:
+        pass
+
+    conn.commit()
+    conn.close()
+    print("Database and tables created/updated successfully!")
+
+def save_user(
+    user_id,
+    profession="general",
+    interests=[],
+    language="english",
+    experience_level="general",
+    reading_time_preference="any"
+):
     conn = get_connection()
     cursor = conn.cursor()
 
     interests_str = ",".join(interests)
-    # We convert list ["markets","startups"] to string "markets,startups"
-    # because SQLite cannot store Python lists directly
+    now = datetime.now().isoformat()
 
     cursor.execute("""
         INSERT OR REPLACE INTO users
-        (user_id, profession, interests, language, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    """, (user_id, profession, interests_str, language, datetime.now().isoformat()))
-    # The ? marks are placeholders - prevents SQL injection attacks
-    # .isoformat() converts datetime to string like "2025-03-22T10:30:00"
+        (user_id, profession, interests, language,
+         experience_level, reading_time_preference,
+         created_at, last_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        user_id, profession, interests_str, language,
+        experience_level, reading_time_preference,
+        now, now
+    ))
 
     conn.commit()
     conn.close()
     print(f"User {user_id} saved successfully!")
 
 def get_user(user_id):
-    # This function reads a user from the database
-    # Returns user data as a dictionary
     conn = get_connection()
     cursor = conn.cursor()
 
+    # Also update last_active when user is fetched
+    cursor.execute("""
+        UPDATE users SET last_active = ?
+        WHERE user_id = ?
+    """, (datetime.now().isoformat(), user_id))
+
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
     user = cursor.fetchone()
+    conn.commit()
     conn.close()
 
     if user is None:
         return None
-    # Convert to regular dictionary
+
     user_dict = dict(user)
-    # Convert interests string back to list
     if user_dict["interests"]:
         user_dict["interests"] = user_dict["interests"].split(",")
     else:
         user_dict["interests"] = []
     return user_dict
 
-def save_reading_history(user_id, article_title, category, time_spent_sec=0):
-    # This function saves every article click by user
-    # Called silently every time user opens an article
+def save_reading_history(
+    user_id,
+    article_title,
+    category,
+    time_spent_sec=0
+):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -123,22 +176,26 @@ def save_reading_history(user_id, article_title, category, time_spent_sec=0):
         INSERT INTO reading_history
         (user_id, article_title, category, time_spent_sec, clicked_at)
         VALUES (?, ?, ?, ?, ?)
-    """, (user_id, article_title, category, time_spent_sec, datetime.now().isoformat()))
+    """, (
+        user_id, article_title, category,
+        time_spent_sec, datetime.now().isoformat()
+    ))
 
     conn.commit()
     conn.close()
 
-    # After saving history, update the interest score for this category
+    # Update interest score after saving history
     update_interest_score(user_id, category, time_spent_sec)
 
 def update_interest_score(user_id, category, time_spent_sec=0):
-    # This function recalculates interest score after every article read
-    # Score formula: (article_count * 0.5) + (total_minutes * 0.5)
-    # Normalized between 0 and 1
+    # IMPROVED FORMULA
+    # score = (click_count * 0.6) + (total_read_minutes * 0.4)
+    # This gives more weight to clicks than time
+    # because user might leave article open without reading
+
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Check if score record already exists for this user + category
     cursor.execute("""
         SELECT * FROM interest_scores
         WHERE user_id = ? AND category = ?
@@ -146,75 +203,145 @@ def update_interest_score(user_id, category, time_spent_sec=0):
     existing = cursor.fetchone()
 
     if existing is None:
-        # First time user reads this category - create new record
-        new_score = min(0.1 + (time_spent_sec / 600), 1.0)
-        # min(..., 1.0) makes sure score never goes above 1
+        # First time reading this category
+        new_count     = 1
+        new_time      = time_spent_sec
+        # score = (1 click * 0.6) + (time_in_minutes * 0.4)
+        new_score     = (1 * 0.6) + ((time_spent_sec / 60) * 0.4)
+        new_score     = min(new_score, 10.0)
+        # cap at 10 before normalization
+
         cursor.execute("""
             INSERT INTO interest_scores
-            (user_id, category, score, article_count, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, category, new_score, 1, datetime.now().isoformat()))
+            (user_id, category, score, article_count,
+             total_time_sec, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            user_id, category, new_score,
+            new_count, new_time, datetime.now().isoformat()
+        ))
     else:
-        # User has read this category before - update existing record
-        existing = dict(existing)
-        new_count = existing["article_count"] + 1
-        new_score = min((new_count * 0.5 + (time_spent_sec / 60) * 0.5) / 10, 1.0)
+        existing      = dict(existing)
+        new_count     = existing["article_count"] + 1
+        new_time      = existing["total_time_sec"] + time_spent_sec
+        # Improved formula: clicks weighted 0.6, time weighted 0.4
+        new_score     = (new_count * 0.6) + ((new_time / 60) * 0.4)
+        new_score     = min(new_score, 10.0)
+
         cursor.execute("""
             UPDATE interest_scores
-            SET score = ?, article_count = ?, updated_at = ?
+            SET score = ?, article_count = ?,
+                total_time_sec = ?, updated_at = ?
             WHERE user_id = ? AND category = ?
-        """, (new_score, new_count, datetime.now().isoformat(), user_id, category))
+        """, (
+            new_score, new_count, new_time,
+            datetime.now().isoformat(), user_id, category
+        ))
+
+    conn.commit()
+    conn.close()
+
+    # After updating, normalize all scores for this user
+    normalize_scores(user_id)
+
+def normalize_scores(user_id):
+    # NORMALIZATION
+    # Makes all scores add up to 1.0
+    # So no single category dominates unfairly
+    # Example: markets=0.6, startups=0.3, economy=0.1
+    # All add up to 1.0 - perfect for ranking
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, score FROM interest_scores
+        WHERE user_id = ?
+    """, (user_id,))
+    rows = cursor.fetchall()
+
+    if not rows:
+        conn.close()
+        return
+
+    # Calculate total of all raw scores
+    total = sum(row["score"] for row in rows)
+
+    if total == 0:
+        conn.close()
+        return
+
+    # Divide each score by total to normalize
+    for row in rows:
+        normalized = round(row["score"] / total, 4)
+        cursor.execute("""
+            UPDATE interest_scores
+            SET normalized_score = ?
+            WHERE id = ?
+        """, (normalized, row["id"]))
 
     conn.commit()
     conn.close()
 
 def get_interest_scores(user_id):
-    # This function returns all interest scores for a user
-    # Personalizer agent uses this to rank articles
+    # Returns normalized scores for personalizer
+    # normalized_score is between 0 and 1
+    # all scores together add up to 1.0
+
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT category, score FROM interest_scores
+        SELECT category, score, normalized_score
+        FROM interest_scores
         WHERE user_id = ?
-        ORDER BY score DESC
+        ORDER BY normalized_score DESC
     """, (user_id,))
-    # ORDER BY score DESC means highest score comes first
 
     rows = cursor.fetchall()
     conn.close()
 
-    # Convert to simple dictionary like {"markets": 0.87, "startups": 0.65}
     scores = {}
     for row in rows:
-        scores[row["category"]] = row["score"]
+        # Use normalized score for ranking
+        # Fall back to raw score if normalized is 0
+        scores[row["category"]] = (
+            row["normalized_score"]
+            if row["normalized_score"] > 0
+            else row["score"]
+        )
     return scores
 
-# This block runs only when you run this file directly
-# It will NOT run when other files import this file
+
+# Test when run directly
 if __name__ == "__main__":
-    print("Creating database...")
+    print("Creating/updating database...")
     create_tables()
 
-    print("\nTesting save_user...")
+    print("\nTesting save_user with new fields...")
     save_user(
         user_id="user_123",
         profession="investor",
         interests=["markets", "startups", "economy"],
-        language="english"
+        language="english",
+        experience_level="professional",
+        reading_time_preference="long"
     )
 
     print("\nTesting get_user...")
     user = get_user("user_123")
-    print("User found:", user)
+    print("User:", user)
 
-    print("\nTesting reading history...")
-    save_reading_history("user_123", "Nifty crosses 24500", "markets", 120)
+    print("\nTesting reading history + improved scores...")
+    save_reading_history("user_123", "Nifty crosses 24500", "markets", 180)
     save_reading_history("user_123", "Zepto raises 350M", "startups", 90)
-    save_reading_history("user_123", "RBI holds repo rate", "markets", 200)
+    save_reading_history("user_123", "RBI holds repo rate", "markets", 240)
+    save_reading_history("user_123", "Budget 2026 highlights", "budget", 60)
 
-    print("\nTesting interest scores...")
+    print("\nTesting normalized interest scores...")
     scores = get_interest_scores("user_123")
-    print("Interest scores:", scores)
+    print("Normalized scores:", scores)
+    print("Sum of scores:", round(sum(scores.values()), 2))
+    print("(Should be 1.0 or close to it)")
 
     print("\nAll database tests passed!")
