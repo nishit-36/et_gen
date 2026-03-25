@@ -1,6 +1,6 @@
 # state/schema.py
-# This file defines what data flows between all agents
-# Think of it like a shared notebook every agent can read and write
+# Shared data structure that flows between all agents
+# Every agent reads from and writes to this state
 
 from typing import TypedDict, List, Optional
 
@@ -15,56 +15,78 @@ class NewsState(TypedDict):
 
     interests: List[str]
     # example: ["markets", "startups", "economy"]
-    
+
     language: str
     # example: "english" / "hindi" / "gujarati"
-    
+
+    # NEW - experience level and reading preference
+    experience_level: Optional[str]
+    # example: "student" / "professional" / "expert"
+
+    reading_time_preference: Optional[str]
+    # example: "short" / "long" / "any"
+
     category: Optional[str]
-    # example: "markets" / "all" -- which tab user clicked
+    # example: "markets" / "all" / "politics" / "jobs"
 
     user_profile: Optional[dict]
     # full profile object stored here so all nodes can access it
 
     # --- WHAT USER WANTS RIGHT NOW ---
     action: str
-    # example: "load_feed" / "search" / "story_arc" / "translate"
+    # example: "load_feed" / "search" / "story_arc" / "translate" / "qa"
 
     query: Optional[str]
-    # example: "Union Budget 2025" -- only filled when user searches
-    # Optional means it can be empty (None) if not needed
+    # example: "Union Budget 2025"
+    # only filled when user searches or asks a question
 
     # --- RAW NEWS FROM FETCHER AGENT ---
     raw_articles: List[dict]
-    # example: [{"title": "Nifty crosses 24500", "summary": "...", "url": "...", "category": "markets"}]
-    # This is filled by News Fetcher Agent
-    # Empty list [] at start
+    # example: [{"title": "...", "summary": "...", "url": "...", "category": "markets"}]
+    # filled by News Fetcher Agent
+    # empty list [] at start
 
     # --- PERSONALIZED FEED FROM PERSONALIZER AGENT ---
     personalized_feed: List[dict]
-    # Same articles but now ranked by relevance for this specific user
-    # Filled by Personalizer Agent after it receives raw_articles
+    # same articles but ranked by relevance for this specific user
+    # each article now also has:
+    #   "relevance_score": 0.9
+    #   "reason": "matches your markets interest"  <-- NEW
+    # filled by Personalizer Agent
 
-    # --- DEEP BRIEFING FROM BRIEFING WRITER ---
+    # --- DEEP BRIEFING ---
     briefing: Optional[str]
-    # Full deep briefing text on a topic
-    # Only filled when user clicks Deep Briefing button
+    # full deep briefing text on a topic
+    # only filled when user clicks Deep Briefing button
 
     # --- STORY ARC FROM STORY ARC AGENT ---
     story_arc: Optional[dict]
-    # example: {"timeline": [...], "key_players": [...], "sentiment": {...}, "predictions": "..."}
-    # Only filled when user clicks Story Arc button
+    # example: {
+    #   "timeline": [...],
+    #   "key_players": [...],
+    #   "sentiment": {...},
+    #   "predictions": "...",
+    #   "sources_used": [...]   <-- NEW
+    # }
+    # only filled when user clicks Story Arc button
+
+    # --- Q&A RESPONSE FROM QA AGENT ---  <-- NEW
+    qa_response: Optional[str]
+    # answer to user's question about an article
+    # example: "RBI kept rates unchanged because inflation..."
+    # only filled when user asks a question about an article
 
     # --- TRANSLATED CONTENT FROM VERNACULAR AGENT ---
     translated_content: Optional[str]
-    # Translated version of article text
-    # Only filled when user clicks Translate button
+    # translated version of article text
+    # only filled when user clicks Translate button
 
     # --- ERROR TRACKING ---
     error: Optional[str]
-    # If anything goes wrong, error message is stored here
-    # None means everything is working fine
+    # if anything goes wrong error message stored here
+    # None means everything working fine
 
     # --- RETRY COUNT ---
     retry_count: int
-    # How many times we tried if something failed
-    # Starts at 0
+    # how many times we tried if something failed
+    # starts at 0, max 2 retries
