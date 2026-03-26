@@ -1,8 +1,8 @@
 # api/main.py
-# This is the FastAPI server
-# It receives requests from the frontend
-# Calls the orchestrator and sends results back
-# Think of it as the waiter between frontend and backend
+# IMPROVEMENTS:
+# 1. New /api/qa endpoint for article Q&A
+# 2. Updated /api/save-user with new profile fields
+# 3. New /api/categories endpoint - sends all categories to frontend
 
 import sys
 import os
@@ -10,25 +10,26 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from agents.orchestrator import run_orchestrator
-from database.db import create_tables, save_user, save_reading_history, get_user
+from agents.qa_agent import run_qa_agent
+from agents.vernacular import run_vernacular
+from agents.fetcher import ALL_CATEGORIES
+from database.db import (
+    create_tables, save_user,
+    save_reading_history, get_user
+)
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Create FastAPI app
 app = FastAPI(
     title="ET News AI",
     description="AI powered personalized news for Economic Times",
-    version="1.0.0"
+    version="2.0.0"
 )
 
-# CORS middleware
-# This allows your HTML frontend to talk to this Python server
-# Without this browser will block all requests from frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,13 +38,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create database tables when server starts
+# Create tables on startup
 create_tables()
 
 # ─────────────────────────────────────────
 # REQUEST MODELS
-# These define what data frontend must send
-# Pydantic validates the data automatically
 # ─────────────────────────────────────────
 
 class FeedRequest(BaseModel):
@@ -71,10 +70,12 @@ class TranslateRequest(BaseModel):
     language: str
 
 class SaveUserRequest(BaseModel):
-    user_id:    str
-    profession: Optional[str] = "general"
-    interests:  Optional[list] = []
-    language:   Optional[str] = "english"
+    user_id:                  str
+    profession:               Optional[str]  = "general"
+    interests:                Optional[list] = []
+    language:                 Optional[str]  = "english"
+    experience_level:         Optional[str]  = "general"
+    reading_time_preference:  Optional[str]  = "any"
 
 class TrackReadRequest(BaseModel):
     user_id:       str
@@ -82,22 +83,44 @@ class TrackReadRequest(BaseModel):
     category:      str
     time_spent:    Optional[int] = 0
 
+# NEW — Q&A request model
+class QARequest(BaseModel):
+    user_id:         str
+    question:        str
+    article_title:   str
+    article_summary: str
+    language:        Optional[str] = "english"
+
 # ─────────────────────────────────────────
-# API ENDPOINTS
-# Each endpoint is a URL the frontend calls
+# ENDPOINTS
 # ─────────────────────────────────────────
 
 @app.get("/")
 def home():
-    # Simple health check endpoint
-    # Open http://localhost:8000 in browser to verify server is running
-    return {"status": "ET News AI backend is running!"}
+    return {
+        "status":  "ET News AI backend is running!",
+        "version": "2.0.0",
+        "features": [
+            "personalized feed",
+            "story arc",
+            "vernacular translation",
+            "article Q&A"
+        ]
+    }
+
+# NEW — Returns all available categories
+# Frontend uses this to build category tabs dynamically
+@app.get("/api/categories")
+def get_categories():
+    return {
+        "status":     "success",
+        "categories": ALL_CATEGORIES,
+        "total":      len(ALL_CATEGORIES)
+    }
 
 @app.post("/api/feed")
 def get_feed(request: FeedRequest):
-    # Called when user opens app or refreshes feed
-    # Returns personalized ranked news feed
-    print(f"\nAPI: /feed called for user {request.user_id}")
+    print(f"\nAPI: /feed called for {request.user_id}")
     result = run_orchestrator(
         user_id  = request.user_id,
         action   = "load_feed",
@@ -107,8 +130,6 @@ def get_feed(request: FeedRequest):
 
 @app.post("/api/category")
 def get_category(request: CategoryRequest):
-    # Called when user clicks a category tab
-    # Returns news for that specific category
     print(f"\nAPI: /category called - {request.category}")
     result = run_orchestrator(
         user_id  = request.user_id,
@@ -120,8 +141,6 @@ def get_category(request: CategoryRequest):
 
 @app.post("/api/search")
 def search_news(request: SearchRequest):
-    # Called when user types in search bar
-    # Returns articles matching the search query
     print(f"\nAPI: /search called - '{request.query}'")
     result = run_orchestrator(
         user_id  = request.user_id,
@@ -133,8 +152,6 @@ def search_news(request: SearchRequest):
 
 @app.post("/api/story-arc")
 def get_story_arc(request: StoryArcRequest):
-    # Called when user clicks Story Arc button
-    # Returns complete story with timeline and sentiment
     print(f"\nAPI: /story-arc called - '{request.topic}'")
     result = run_orchestrator(
         user_id = request.user_id,
@@ -145,54 +162,74 @@ def get_story_arc(request: StoryArcRequest):
 
 @app.post("/api/translate")
 def translate_article(request: TranslateRequest):
-    # Called when user clicks translate button
-    # Returns article translated to selected language
-    print(f"\nAPI: /translate called - language: {request.language}")
-    from agents.vernacular import run_vernacular
+    print(f"\nAPI: /translate - {request.language}")
     article = {
         "title":   request.title,
         "summary": request.summary
     }
     result = run_vernacular(article, request.language)
     return {
-        "status":              "success",
-        "translated_title":    result.get("translated_title", request.title),
-        "translated_summary":  result.get("translated_summary", request.summary),
-        "language":            request.language
+        "status":             "success",
+        "translated_title":   result.get("translated_title",   request.title),
+        "translated_summary": result.get("translated_summary", request.summary),
+        "language":           request.language,
+        "translation_failed": result.get("translation_failed", False)
+    }
+
+# NEW — Q&A endpoint
+# Called when user asks a question about an article
+@app.post("/api/qa")
+def ask_question(request: QARequest):
+    print(f"\nAPI: /qa called")
+    print(f"  Question: {request.question[:50]}...")
+
+    # Get user profile for profession info
+    user = get_user(request.user_id)
+    profession = user["profession"] if user else "general"
+
+    result = run_qa_agent(
+        question        = request.question,
+        article_title   = request.article_title,
+        article_summary = request.article_summary,
+        user_profession = profession,
+        language        = request.language
+    )
+
+    return {
+        "status":              "success" if not result["error"] else "error",
+        "answer":              result["answer"],
+        "follow_up_questions": result["follow_up_questions"],
+        "error":               result["error"]
     }
 
 @app.post("/api/save-user")
 def save_user_profile(request: SaveUserRequest):
-    # Called when user completes optional profile setup
-    # Saves profession, interests and language to database
-    print(f"\nAPI: /save-user called for {request.user_id}")
+    print(f"\nAPI: /save-user - {request.user_id}")
     save_user(
-        user_id    = request.user_id,
-        profession = request.profession,
-        interests  = request.interests,
-        language   = request.language
+        user_id                 = request.user_id,
+        profession              = request.profession,
+        interests               = request.interests,
+        language                = request.language,
+        experience_level        = request.experience_level,
+        reading_time_preference = request.reading_time_preference
     )
     return {"status": "success", "message": "Profile saved"}
 
 @app.post("/api/track-read")
 def track_reading(request: TrackReadRequest):
-    # Called silently every time user opens an article
-    # Saves reading history to improve personalization
     print(f"\nAPI: /track-read - {request.article_title[:40]}")
     save_reading_history(
-        user_id       = request.user_id,
-        article_title = request.article_title,
-        category      = request.category,
-        time_spent_sec= request.time_spent
+        user_id        = request.user_id,
+        article_title  = request.article_title,
+        category       = request.category,
+        time_spent_sec = request.time_spent
     )
     return {"status": "success"}
 
 @app.get("/api/user/{user_id}")
 def get_user_profile(user_id: str):
-    # Called when frontend needs to check if user exists
-    # Returns user profile or null if new user
     user = get_user(user_id)
     if user:
-        return {"status": "found", "user": user}
+        return {"status": "found",    "user": user}
     else:
         return {"status": "new_user", "user": None}
