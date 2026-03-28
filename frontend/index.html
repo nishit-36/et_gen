@@ -3,153 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ET News AI</title>
+    <title>ET News AI — Personalized Intelligence</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <!-- ONBOARDING SCREEN -->
-    <!-- Shows only for new users -->
     <div id="onboarding-screen" class="screen hidden">
-        <div class="onboarding-box">
-            <div class="onboarding-logo">ET News AI</div>
-            <div class="onboarding-title">Welcome! Tell us about yourself</div>
-            <div class="onboarding-sub">We personalize your news feed based on your profile</div>
-
-            <div class="form-group">
-                <div class="form-label">I am a...</div>
-                <div class="chip-group" id="profession-chips">
-                    <span class="chip" data-value="investor">Investor</span>
-                    <span class="chip" data-value="student">Student</span>
-                    <span class="chip" data-value="startup_founder">Startup Founder</span>
-                    <span class="chip" data-value="professional">Business Professional</span>
+        <div class="onboarding-wrap">
+            <div class="onboarding-left">
+                <div class="ob-logo">ET</div>
+                <div class="ob-tagline">News AI</div>
+                <div class="ob-desc">India's first AI-powered personalized business news experience. Built on Economic Times intelligence.</div>
+                <div class="ob-features">
+                    <div class="ob-feature">Personalized feed that learns from you</div>
+                    <div class="ob-feature">Deep briefings on any topic</div>
+                    <div class="ob-feature">Story arcs with timeline and sentiment</div>
+                    <div class="ob-feature">Ask questions about any article</div>
+                    <div class="ob-feature">Read news in your language</div>
                 </div>
             </div>
+            <div class="onboarding-right">
+                <div class="ob-form">
+                    <div class="ob-form-title">Set up your feed</div>
+                    <div class="ob-form-sub">Takes 30 seconds. You can change this anytime.</div>
 
-            <div class="form-group">
-                <div class="form-label">I am interested in...</div>
-                <div class="chip-group" id="interest-chips">
-                    <span class="chip" data-value="markets">Markets</span>
-                    <span class="chip" data-value="startups">Startups</span>
-                    <span class="chip" data-value="economy">Economy</span>
-                    <span class="chip" data-value="tech">Technology</span>
-                    <span class="chip" data-value="budget">Budget</span>
+                    <div class="form-group">
+                        <div class="form-label">I am a</div>
+                        <div class="chip-group" id="profession-chips">
+                            <span class="chip" data-value="investor">Investor</span>
+                            <span class="chip" data-value="student">Student</span>
+                            <span class="chip" data-value="startup_founder">Startup Founder</span>
+                            <span class="chip" data-value="professional">Professional</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label">My experience level</div>
+                        <div class="chip-group" id="experience-chips">
+                            <span class="chip" data-value="beginner">Beginner</span>
+                            <span class="chip" data-value="general">General</span>
+                            <span class="chip" data-value="expert">Expert</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label">I follow</div>
+                        <div class="chip-group" id="interest-chips">
+                            <span class="chip" data-value="markets">Markets</span>
+                            <span class="chip" data-value="startups">Startups</span>
+                            <span class="chip" data-value="economy">Economy</span>
+                            <span class="chip" data-value="tech">Technology</span>
+                            <span class="chip" data-value="politics">Politics</span>
+                            <span class="chip" data-value="auto">Auto</span>
+                            <span class="chip" data-value="real-estate">Real Estate</span>
+                            <span class="chip" data-value="education">Education</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label">I prefer articles that are</div>
+                        <div class="chip-group" id="reading-chips">
+                            <span class="chip active" data-value="any">Any length</span>
+                            <span class="chip" data-value="short">Short reads</span>
+                            <span class="chip" data-value="long">In-depth</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label">Read news in</div>
+                        <div class="chip-group" id="language-chips">
+                            <span class="chip active" data-value="english">English</span>
+                            <span class="chip" data-value="hindi">हिंदी</span>
+                            <span class="chip" data-value="gujarati">ગુજરાતી</span>
+                            <span class="chip" data-value="tamil">தமிழ்</span>
+                            <span class="chip" data-value="bengali">বাংলা</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="saveProfile()">
+                        Build My Feed
+                    </button>
+                    <div class="skip-link" onclick="skipOnboarding()">
+                        Skip — show all news
+                    </div>
                 </div>
-            </div>
-
-            <div class="form-group">
-                <div class="form-label">Preferred language</div>
-                <div class="chip-group" id="language-chips">
-                    <span class="chip active" data-value="english">English</span>
-                    <span class="chip" data-value="hindi">हिंदी</span>
-                    <span class="chip" data-value="gujarati">ગુજરાતી</span>
-                    <span class="chip" data-value="tamil">தமிழ்</span>
-                    <span class="chip" data-value="bengali">বাংলা</span>
-                </div>
-            </div>
-
-            <button class="btn-primary" onclick="saveProfile()">
-                Get My Personalized Feed →
-            </button>
-            <div class="skip-link" onclick="skipOnboarding()">
-                Skip for now — show all news
             </div>
         </div>
     </div>
 
-    <!-- MAIN APP SCREEN -->
+    <!-- MAIN APP -->
     <div id="main-screen" class="screen hidden">
 
-        <!-- TOP NAVBAR -->
+        <!-- NAVBAR -->
         <nav class="navbar">
-            <div class="nav-left">
-                <div class="nav-logo">ET News AI</div>
+            <div class="nav-brand">
+                <span class="nav-et">ET</span>
+                <span class="nav-ai">News AI</span>
             </div>
-            <div class="nav-center">
-                <div class="search-bar">
+            <div class="nav-search">
+                <div class="search-wrap">
+                    <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+                        <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M15 15l-3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
                     <input
                         type="text"
                         id="search-input"
-                        placeholder="Search any topic — Budget, Nifty, Startup..."
+                        placeholder="Search ET news, topics, companies..."
                         onkeypress="handleSearchKey(event)"
                     />
-                    <button onclick="searchNews()">Search</button>
+                    <button class="search-btn" onclick="searchNews()">Search</button>
                 </div>
             </div>
             <div class="nav-right">
-                <span id="user-label" class="user-label"></span>
-                <button class="btn-settings" onclick="showOnboarding()">Settings</button>
+                <div class="nav-user" id="nav-user"></div>
+                <button class="nav-settings" onclick="showOnboarding()">
+                    <svg viewBox="0 0 20 20" fill="none" width="16" height="16">
+                        <circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M10 3v2M10 15v2M3 10h2M15 10h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
             </div>
         </nav>
 
         <!-- CATEGORY TABS -->
-        <div class="tabs-bar">
-            <button class="tab active" onclick="loadCategory('all', this)">All News</button>
-            <button class="tab" onclick="loadCategory('markets', this)">Markets</button>
-            <button class="tab" onclick="loadCategory('startups', this)">Startups</button>
-            <button class="tab" onclick="loadCategory('economy', this)">Economy</button>
-            <button class="tab" onclick="loadCategory('tech', this)">Technology</button>
-            <button class="tab" onclick="loadCategory('budget', this)">Budget</button>
+        <div class="tabs-wrap">
+            <div class="tabs-inner" id="tabs-container">
+                <!-- Tabs injected by JS from /api/categories -->
+            </div>
         </div>
 
-        <!-- MAIN CONTENT AREA -->
-        <div class="content-area">
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
 
-            <!-- NEWS FEED PANEL -->
-            <div id="feed-panel" class="panel">
-                <div id="feed-header" class="feed-header">
-                    <div class="feed-title">Your Personalized Feed</div>
-                    <div class="feed-sub" id="feed-sub">Loading latest news...</div>
+            <!-- FEED PANEL -->
+            <div id="feed-panel" class="panel active">
+                <div class="feed-top">
+                    <div>
+                        <div class="feed-title" id="feed-title">Your Feed</div>
+                        <div class="feed-meta" id="feed-meta">Loading...</div>
+                    </div>
+                    <div class="feed-actions">
+                        <button class="btn-refresh" onclick="refreshFeed()">
+                            Refresh
+                        </button>
+                    </div>
                 </div>
-                <div id="news-grid" class="news-grid">
-                    <!-- News cards injected here by JavaScript -->
+                <div id="loading-bar" class="loading-bar hidden">
+                    <div class="loading-bar-fill"></div>
                 </div>
-                <div id="loading" class="loading hidden">
-                    <div class="spinner"></div>
-                    <div class="loading-text">AI is fetching and personalizing your news...</div>
-                </div>
+                <div id="news-grid" class="news-grid"></div>
             </div>
 
             <!-- STORY ARC PANEL -->
             <div id="arc-panel" class="panel hidden">
-                <div class="panel-header">
-                    <button class="btn-back" onclick="showFeed()">← Back to Feed</button>
-                    <div class="panel-title" id="arc-title">Story Arc</div>
+                <div class="panel-nav">
+                    <button class="btn-back" onclick="showFeed()">
+                        ← Back to Feed
+                    </button>
+                    <div class="panel-breadcrumb">
+                        Feed / <span id="arc-breadcrumb">Story Arc</span>
+                    </div>
                 </div>
-                <div id="arc-content" class="arc-content">
-                    <!-- Story arc injected here -->
+                <div id="arc-loading" class="center-loading hidden">
+                    <div class="pulse-dot"></div>
+                    <div class="pulse-dot"></div>
+                    <div class="pulse-dot"></div>
+                    <div style="margin-top:12px;font-size:13px;color:var(--text-muted)">Building story arc...</div>
                 </div>
+                <div id="arc-content"></div>
             </div>
-
             <!-- BRIEFING PANEL -->
-            <div id="briefing-panel" class="panel hidden">
-                <div class="panel-header">
+            <div id="briefing-panel" class="panel hidden" style="display:none;">
+                <div class="panel-nav">
                     <button class="btn-back" onclick="showFeed()">← Back to Feed</button>
-                    <div class="panel-title">Deep Briefing</div>
+                    <div class="panel-breadcrumb">
+                        Feed / <span id="briefing-breadcrumb">Deep Briefing</span>
+                    </div>
                 </div>
-                <div id="briefing-content" class="briefing-content">
-                    <!-- Briefing injected here -->
+                <div id="briefing-content"></div>
+            </div>
+            <!-- Q&A PANEL -->
+            <div id="qa-panel" class="panel hidden">
+                <div class="panel-nav">
+                    <button class="btn-back" onclick="showFeed()">
+                        ← Back to Feed
+                    </button>
+                    <div class="panel-breadcrumb">
+                        Feed / <span id="qa-breadcrumb">Ask AI</span>
+                    </div>
                 </div>
+                <div id="qa-content"></div>
             </div>
 
         </div>
     </div>
 
-    <!-- TRANSLATE MODAL -->
-    <div id="translate-modal" class="modal hidden">
-        <div class="modal-box">
-            <div class="modal-title">Translate Article</div>
-            <div class="modal-lang-grid">
-                <button onclick="translateArticle('hindi')">हिंदी</button>
-                <button onclick="translateArticle('gujarati')">ગુજરાતી</button>
-                <button onclick="translateArticle('tamil')">தமிழ்</button>
-                <button onclick="translateArticle('telugu')">తెలుగు</button>
-                <button onclick="translateArticle('bengali')">বাংলা</button>
-            </div>
-            <button class="modal-close" onclick="closeTranslateModal()">Cancel</button>
+   <!-- TRANSLATE MODAL -->
+<div id="translate-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title">Translate article</div>
+            <button class="modal-close-btn" onclick="closeTranslateModal()">✕</button>
         </div>
-    </div>
 
-    <script src="app.js"></script>
+        <div class="modal-lang-grid">
+            <button onclick="translateArticle('english')">
+                <span class="lang-native">English</span>
+                <span class="lang-en">Original</span>
+            </button>
+            <button onclick="translateArticle('hindi')">
+                <span class="lang-native">हिंदी</span>
+                <span class="lang-en">Hindi</span>
+            </button>
+            <button onclick="translateArticle('gujarati')">
+                <span class="lang-native">ગુજરાતી</span>
+                <span class="lang-en">Gujarati</span>
+            </button>
+            <button onclick="translateArticle('tamil')">
+                <span class="lang-native">தமிழ்</span>
+                <span class="lang-en">Tamil</span>
+            </button>
+            <button onclick="translateArticle('telugu')">
+                <span class="lang-native">తెలుగు</span>
+                <span class="lang-en">Telugu</span>
+            </button>
+            <button onclick="translateArticle('bengali')">
+                <span class="lang-native">বাংলা</span>
+                <span class="lang-en">Bengali</span>
+            </button>
+        </div>
+
+    </div> <!-- modal-box -->
+</div> <!-- translate-modal -->
+
+<script src="app.js"></script>
 </body>
 </html>
